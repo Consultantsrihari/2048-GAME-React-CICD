@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "base-service.fullname" . }}
+  labels:
+    {{- include "base-service.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.deployment.replicas }}
+  strategy:
+    type: {{ .Values.deployment.strategy.type }}
+    {{- if eq .Values.deployment.strategy.type "RollingUpdate" }}
+    rollingUpdate:
+      maxSurge: {{ .Values.deployment.strategy.rollingUpdate.maxSurge }}
+      maxUnavailable: {{ .Values.deployment.strategy.rollingUpdate.maxUnavailable }}
+    {{- end }}
+  selector:
+    matchLabels:
+      {{- include "base-service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "base-service.selectorLabels" . | nindent 8 }}
+      {{- with .Values.deployment.pod.labels }}
+      labels:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.deployment.pod.annotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.global.imagePullSecrets | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.deployment.pod.securityContext | nindent 8 }}
+      containers:
+        - name: {{ .Values.deployment.pod.container.name }}
+          image: "{{ .Values.global.imageRegistry }}/{{ .Values.deployment.pod.container.image.repository }}:{{ .Values.deployment.pod.container.image.tag }}"
+          imagePullPolicy: {{ .Values.deployment.pod.container.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          {{- if .Values.deployment.pod.container.env }}
+          env:
+            {{- toYaml .Values.deployment.pod.container.env | nindent 12 }}
+          {{- end }}
+          {{- if .Values.deployment.pod.container.envFrom }}
+          envFrom:
+            {{- toYaml .Values.deployment.pod.container.envFrom | nindent 12 }}
+          {{- end }}
+          {{- if .Values.deployment.pod.container.volumeMounts }}
+          volumeMounts:
+            {{- toYaml .Values.deployment.pod.container.volumeMounts | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.deployment.pod.container.resources | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.deployment.pod.container.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.deployment.pod.container.readinessProbe | nindent 12 }}
+          {{- if .Values.deployment.pod.container.startupProbe }}
+          startupProbe:
+            {{- toYaml .Values.deployment.pod.container.startupProbe | nindent 12 }}
+          {{- end }}
+      {{- if .Values.deployment.volumes }}
+      volumes:
+        {{- toYaml .Values.deployment.volumes | nindent 8 }}
+      {{- end }}

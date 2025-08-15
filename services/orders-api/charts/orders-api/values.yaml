@@ -1,0 +1,225 @@
+# Default values for orders-api
+# This is a YAML-formatted file.
+
+# Global configuration
+global:
+  environment: development
+  imageRegistry: ghcr.io/automobile-company
+  imagePullSecrets: []
+
+# Service configuration
+service:
+  name: orders-api
+  port: 8000
+  type: ClusterIP
+  annotations: {}
+
+# Deployment configuration
+deployment:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  # Pod configuration
+  pod:
+    annotations: {}
+    labels: {}
+    
+    # Security context
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+    
+    # Container configuration
+    container:
+      name: app
+      image:
+        repository: orders-api
+        tag: latest
+        pullPolicy: IfNotPresent
+      
+      # Resources
+      resources:
+        requests:
+          cpu: 200m
+          memory: 256Mi
+        limits:
+          cpu: 1000m
+          memory: 1Gi
+      
+      # Environment variables
+      env:
+        - name: DEBUG
+          value: "false"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: orders-api-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: orders-api-secrets
+              key: redis-url
+        - name: JWT_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: orders-api-secrets
+              key: jwt-secret-key
+        - name: STRIPE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: orders-api-secrets
+              key: stripe-secret-key
+        - name: AUTH_SERVICE_URL
+          value: "http://auth-api.orders-api-dev.svc.cluster.local:8000"
+        - name: PAYMENTS_SERVICE_URL
+          value: "http://payments-api.payments-api-dev.svc.cluster.local:8000"
+        - name: INVENTORY_SERVICE_URL
+          value: "http://inventory-api.inventory-api-dev.svc.cluster.local:8000"
+      
+      # Environment variables from secrets
+      envFrom: []
+      
+      # Volume mounts
+      volumeMounts: []
+      
+      # Liveness probe
+      livenessProbe:
+        httpGet:
+          path: /healthz
+          port: 8000
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        timeoutSeconds: 5
+        failureThreshold: 3
+      
+      # Readiness probe
+      readinessProbe:
+        httpGet:
+          path: /healthz
+          port: 8000
+        initialDelaySeconds: 5
+        periodSeconds: 5
+        timeoutSeconds: 3
+        failureThreshold: 3
+      
+      # Startup probe
+      startupProbe:
+        httpGet:
+          path: /healthz
+          port: 8000
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 5
+        failureThreshold: 30
+  
+  # Volumes
+  volumes: []
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+  hosts:
+    - host: orders-api.automobile-company.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# ServiceMonitor for Prometheus
+serviceMonitor:
+  enabled: true
+  interval: 30s
+  path: /metrics
+
+# Horizontal Pod Autoscaler
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Network policies
+networkPolicy:
+  enabled: true
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: automobile-company
+        - podSelector:
+            matchLabels:
+              app: nginx-ingress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: automobile-company
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 53
+        - protocol: UDP
+          port: 53
+
+# Pod disruption budget
+pdb:
+  enabled: true
+  minAvailable: 1
+
+# ConfigMap and Secret configuration
+configMap:
+  enabled: false
+  data: {}
+
+secret:
+  enabled: true
+  data:
+    database-url: "postgresql://orders_user:orders_password@postgresql.orders-api-dev.svc.cluster.local:5432/orders_db"
+    redis-url: "redis://redis.orders-api-dev.svc.cluster.local:6379/0"
+    jwt-secret-key: "your-super-secret-jwt-key-change-in-production"
+    stripe-secret-key: "sk_test_your_stripe_secret_key"
+
+# Database configuration
+database:
+  enabled: true
+  type: postgresql
+  host: "postgresql.orders-api-dev.svc.cluster.local"
+  port: 5432
+  name: "orders_db"
+  username: "orders_user"
+  password: "orders_password"
+
+# Redis configuration
+redis:
+  enabled: true
+  host: "redis.orders-api-dev.svc.cluster.local"
+  port: 6379
+  password: ""
+
+# Logging configuration
+logging:
+  level: INFO
+  format: json
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  metrics: true
+  tracing: true
+  logging: true

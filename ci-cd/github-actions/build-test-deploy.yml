@@ -1,0 +1,291 @@
+name: Build, Test, and Deploy Microservices
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: automobile-company
+
+jobs:
+  # Matrix job for all microservices
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - orders-api
+          - inventory-api
+          - payments-api
+          - auth-api
+          - users-api
+          - vehicles-api
+          - telemetry-api
+          - geofence-api
+          - notifications-api
+          - billing-api
+          - dealer-portal
+          - reports-api
+        python-version: [3.9, 3.11]
+        exclude:
+          - service: dealer-portal
+            python-version: 3.9  # dealer-portal might need newer Python
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.service }}-${{ hashFiles('services/${{ matrix.service }}/pyproject.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.service }}-
+
+    - name: Install dependencies
+      run: |
+        cd services/${{ matrix.service }}
+        python -m pip install --upgrade pip
+        pip install -e ".[dev]"
+
+    - name: Run linting
+      run: |
+        cd services/${{ matrix.service }}
+        black --check src/ tests/
+        isort --check-only src/ tests/
+        flake8 src/ tests/
+        mypy src/
+
+    - name: Run tests
+      run: |
+        cd services/${{ matrix.service }}
+        pytest --cov=src --cov-report=xml --cov-report=term-missing
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: services/${{ matrix.service }}/coverage.xml
+        flags: ${{ matrix.service }}
+        name: ${{ matrix.service }}-coverage
+
+  # Build and push Docker images
+  build-and-push:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        service:
+          - orders-api
+          - inventory-api
+          - payments-api
+          - auth-api
+          - users-api
+          - vehicles-api
+          - telemetry-api
+          - geofence-api
+          - notifications-api
+          - billing-api
+          - dealer-portal
+          - reports-api
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./services/${{ matrix.service }}
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # Deploy to development environment
+  deploy-dev:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
+    environment: development
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+
+    - name: Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_DEV }}" | base64 -d > kubeconfig
+        export KUBECONFIG=kubeconfig
+
+    - name: Deploy to development
+      run: |
+        # Deploy infrastructure
+        cd infrastructure/terraform
+        terraform init
+        terraform apply -auto-approve -var-file=dev.tfvars
+        
+        # Deploy all services
+        for service in orders-api inventory-api payments-api auth-api users-api vehicles-api telemetry-api geofence-api notifications-api billing-api dealer-portal reports-api; do
+          helm upgrade --install $service services/$service/charts/$service/ \
+            --namespace $service-dev \
+            --create-namespace \
+            --set global.environment=development \
+            --set deployment.pod.container.image.tag=develop
+        done
+
+  # Deploy to staging environment
+  deploy-staging:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: staging
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+
+    - name: Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG_STAGING }}" | base64 -d > kubeconfig
+        export KUBECONFIG=kubeconfig
+
+    - name: Deploy to staging
+      run: |
+        # Deploy infrastructure
+        cd infrastructure/terraform
+        terraform init
+        terraform apply -auto-approve -var-file=staging.tfvars
+        
+        # Deploy all services
+        for service in orders-api inventory-api payments-api auth-api users-api vehicles-api telemetry-api geofence-api notifications-api billing-api dealer-portal reports-api; do
+          helm upgrade --install $service services/$service/charts/$service/ \
+            --namespace $service-staging \
+            --create-namespace \
+            --set global.environment=staging \
+            --set deployment.pod.container.image.tag=main
+        done
+
+  # Security scanning
+  security-scan:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - orders-api
+          - inventory-api
+          - payments-api
+          - auth-api
+          - users-api
+          - vehicles-api
+          - telemetry-api
+          - geofence-api
+          - notifications-api
+          - billing-api
+          - dealer-portal
+          - reports-api
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: 'services/${{ matrix.service }}'
+        format: 'sarif'
+        output: 'trivy-results-${{ matrix.service }}.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results-${{ matrix.service }}.sarif'
+
+  # Performance testing
+  performance-test:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install locust
+
+    - name: Run performance tests
+      run: |
+        # Run load tests against staging environment
+        locust -f tests/performance/locustfile.py \
+          --host=https://staging.automobile-company.com \
+          --users=100 \
+          --spawn-rate=10 \
+          --run-time=5m \
+          --headless
+
+  # Notify deployment status
+  notify:
+    needs: [deploy-staging, performance-test]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Notify Slack
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}

@@ -1,0 +1,172 @@
+# Default values for base-service
+# This is a YAML-formatted file.
+
+# Global configuration
+global:
+  environment: development
+  imageRegistry: ghcr.io/automobile-company
+  imagePullSecrets: []
+
+# Service configuration
+service:
+  name: base-service
+  port: 8000
+  type: ClusterIP
+  annotations: {}
+
+# Deployment configuration
+deployment:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  # Pod configuration
+  pod:
+    annotations: {}
+    labels: {}
+    
+    # Security context
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 1000
+    
+    # Container configuration
+    container:
+      name: app
+      image:
+        repository: base-service
+        tag: latest
+        pullPolicy: IfNotPresent
+      
+      # Resources
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          cpu: 500m
+          memory: 512Mi
+      
+      # Environment variables
+      env: []
+      
+      # Environment variables from secrets
+      envFrom: []
+      
+      # Volume mounts
+      volumeMounts: []
+      
+      # Liveness probe
+      livenessProbe:
+        httpGet:
+          path: /healthz
+          port: 8000
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        timeoutSeconds: 5
+        failureThreshold: 3
+      
+      # Readiness probe
+      readinessProbe:
+        httpGet:
+          path: /healthz
+          port: 8000
+        initialDelaySeconds: 5
+        periodSeconds: 5
+        timeoutSeconds: 3
+        failureThreshold: 3
+      
+      # Startup probe
+      startupProbe:
+        httpGet:
+          path: /healthz
+          port: 8000
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 5
+        failureThreshold: 30
+  
+  # Volumes
+  volumes: []
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: base-service.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# ServiceMonitor for Prometheus
+serviceMonitor:
+  enabled: false
+  interval: 30s
+  path: /metrics
+
+# Horizontal Pod Autoscaler
+hpa:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Network policies
+networkPolicy:
+  enabled: false
+  ingress: []
+  egress: []
+
+# Pod disruption budget
+pdb:
+  enabled: false
+  minAvailable: 1
+
+# ConfigMap and Secret configuration
+configMap:
+  enabled: false
+  data: {}
+
+secret:
+  enabled: false
+  data: {}
+
+# Database configuration
+database:
+  enabled: false
+  type: postgresql
+  host: ""
+  port: 5432
+  name: ""
+  username: ""
+  password: ""
+
+# Redis configuration
+redis:
+  enabled: false
+  host: ""
+  port: 6379
+  password: ""
+
+# Logging configuration
+logging:
+  level: INFO
+  format: json
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  metrics: true
+  tracing: true
+  logging: true

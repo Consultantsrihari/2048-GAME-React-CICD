@@ -1,0 +1,16 @@
+apiVersion: v2
+name: base-service
+description: Base Helm chart for automobile company microservices
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - automobile
+  - microservice
+  - fastapi
+home: https://github.com/automobile-company/microservices
+sources:
+  - https://github.com/automobile-company/microservices
+maintainers:
+  - name: Automobile Company
+    email: dev@automobile-company.com
