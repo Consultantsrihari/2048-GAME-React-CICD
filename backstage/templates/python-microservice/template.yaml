@@ -1,0 +1,193 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: python-microservice
+  title: Python Microservice
+  description: Create a new Python FastAPI microservice with the standard automobile company structure
+  tags:
+    - python
+    - fastapi
+    - microservice
+    - automobile
+  annotations:
+    github.com/project-slug: automobile-company/microservices
+spec:
+  owner: platform-team
+  type: service
+  
+  parameters:
+    - title: Service Information
+      required:
+        - serviceName
+        - serviceDescription
+        - serviceOwner
+      properties:
+        serviceName:
+          title: Service Name
+          type: string
+          description: The name of the microservice (e.g., customer-api, product-api)
+          pattern: '^[a-z-]+$'
+          ui:field: EntityNamePicker
+        serviceDescription:
+          title: Service Description
+          type: string
+          description: A brief description of what this service does
+          ui:widget: textarea
+        serviceOwner:
+          title: Service Owner
+          type: string
+          description: The team or person responsible for this service
+          ui:field: OwnerPicker
+          ui:options:
+            allowedOwners:
+              - orders-team
+              - inventory-team
+              - payments-team
+              - auth-team
+              - users-team
+              - vehicles-team
+              - telemetry-team
+              - geofence-team
+              - notifications-team
+              - billing-team
+              - frontend-team
+              - analytics-team
+              - platform-team
+    
+    - title: Technical Configuration
+      properties:
+        pythonVersion:
+          title: Python Version
+          type: string
+          enum: ['3.9', '3.10', '3.11']
+          default: '3.11'
+          description: Python version to use
+        databaseType:
+          title: Database Type
+          type: string
+          enum: ['postgresql', 'mysql', 'sqlite']
+          default: 'postgresql'
+          description: Database type for this service
+        enableRedis:
+          title: Enable Redis
+          type: boolean
+          default: true
+          description: Whether to include Redis configuration
+        enableMonitoring:
+          title: Enable Monitoring
+          type: boolean
+          default: true
+          description: Whether to include monitoring and metrics
+        enableTracing:
+          title: Enable Tracing
+          type: boolean
+          default: true
+          description: Whether to include distributed tracing
+    
+    - title: Deployment Configuration
+      properties:
+        replicas:
+          title: Number of Replicas
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 2
+          description: Number of replicas for the deployment
+        enableHPA:
+          title: Enable Horizontal Pod Autoscaler
+          type: boolean
+          default: true
+          description: Whether to create an HPA for this service
+        enableIngress:
+          title: Enable Ingress
+          type: boolean
+          default: true
+          description: Whether to create an ingress for this service
+        enableNetworkPolicy:
+          title: Enable Network Policy
+          type: boolean
+          default: true
+          description: Whether to create network policies for this service
+    
+    - title: Repository Configuration
+      properties:
+        repoUrl:
+          title: Repository URL
+          type: string
+          description: The URL of the repository where this service will be created
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+        defaultBranch:
+          title: Default Branch
+          type: string
+          default: main
+          description: The default branch for the repository
+
+  steps:
+    - id: template-service
+      name: Template Service
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          serviceName: ${{ parameters.serviceName }}
+          serviceDescription: ${{ parameters.serviceDescription }}
+          serviceOwner: ${{ parameters.serviceOwner }}
+          pythonVersion: ${{ parameters.pythonVersion }}
+          databaseType: ${{ parameters.databaseType }}
+          enableRedis: ${{ parameters.enableRedis }}
+          enableMonitoring: ${{ parameters.enableMonitoring }}
+          enableTracing: ${{ parameters.enableTracing }}
+          replicas: ${{ parameters.replicas }}
+          enableHPA: ${{ parameters.enableHPA }}
+          enableIngress: ${{ parameters.enableIngress }}
+          enableNetworkPolicy: ${{ parameters.enableNetworkPolicy }}
+    
+    - id: publish
+      name: Publish
+      action: publish:github
+      input:
+        repoUrl: ${{ parameters.repoUrl }}
+        defaultBranch: ${{ parameters.defaultBranch }}
+        description: ${{ parameters.serviceDescription }}
+        repoVisibility: private
+    
+    - id: register
+      name: Register
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.remoteUrl }}
+        catalogInfoPath: '/catalog-info.yaml'
+    
+    - id: create-helm-release
+      name: Create Helm Release
+      action: debug:log
+      input:
+        message: |
+          Helm chart created at: services/${{ parameters.serviceName }}/charts/${{ parameters.serviceName }}/
+          To deploy:
+          helm install ${{ parameters.serviceName }} services/${{ parameters.serviceName }}/charts/${{ parameters.serviceName }}/ -n ${{ parameters.serviceName }}-dev
+    
+    - id: create-terraform-resources
+      name: Create Terraform Resources
+      action: debug:log
+      input:
+        message: |
+          Terraform resources need to be added to:
+          - infrastructure/terraform/main.tf (RDS instance)
+          - infrastructure/terraform/variables.tf (if needed)
+          - infrastructure/terraform/terraform.tfvars (environment-specific values)
+
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+        icon: github
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}
+      - title: View API documentation
+        url: ${{ steps.publish.output.remoteUrl }}/blob/main/README.md
+        icon: docs

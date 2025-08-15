@@ -1,0 +1,321 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: automobile-company-platform
+  description: Modern connected-car platform with 12 microservices
+  annotations:
+    github.com/project-slug: automobile-company/microservices
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - microservices
+    - automobile
+    - python
+    - fastapi
+    - kubernetes
+    - aws
+  links:
+    - url: https://github.com/automobile-company/microservices
+      title: GitHub Repository
+      icon: github
+    - url: https://docs.automobile-company.com
+      title: Documentation
+      icon: docs
+    - url: https://grafana.automobile-company.com
+      title: Grafana Dashboard
+      icon: dashboard
+    - url: https://jaeger.automobile-company.com
+      title: Jaeger Tracing
+      icon: monitoring
+spec:
+  type: website
+  lifecycle: production
+  owner: platform-team
+  system: automobile-platform
+  dependsOn:
+    - resource:orders-api
+    - resource:inventory-api
+    - resource:payments-api
+    - resource:auth-api
+    - resource:users-api
+    - resource:vehicles-api
+    - resource:telemetry-api
+    - resource:geofence-api
+    - resource:notifications-api
+    - resource:billing-api
+    - resource:dealer-portal
+    - resource:reports-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: orders-api
+  description: Orders management microservice
+  annotations:
+    github.com/project-slug: automobile-company/microservices
+    backstage.io/techdocs-ref: dir:./services/orders-api
+  tags:
+    - microservice
+    - python
+    - fastapi
+    - orders
+spec:
+  type: service
+  lifecycle: production
+  owner: orders-team
+  system: automobile-platform
+  dependsOn:
+    - resource:postgresql-orders
+    - resource:redis
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: inventory-api
+  description: Inventory management microservice
+  annotations:
+    github.com/project-slug: automobile-company/microservices
+    backstage.io/techdocs-ref: dir:./services/inventory-api
+  tags:
+    - microservice
+    - python
+    - fastapi
+    - inventory
+spec:
+  type: service
+  lifecycle: production
+  owner: inventory-team
+  system: automobile-platform
+  dependsOn:
+    - resource:postgresql-inventory
+    - resource:redis
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: payments-api
+  description: Payment processing microservice
+  annotations:
+    github.com/project-slug: automobile-company/microservices
+    backstage.io/techdocs-ref: dir:./services/payments-api
+  tags:
+    - microservice
+    - python
+    - fastapi
+    - payments
+spec:
+  type: service
+  lifecycle: production
+  owner: payments-team
+  system: automobile-platform
+  dependsOn:
+    - resource:postgresql-payments
+    - resource:redis
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: auth-api
+  description: Authentication and authorization microservice
+  annotations:
+    github.com/project-slug: automobile-company/microservices
+    backstage.io/techdocs-ref: dir:./services/auth-api
+  tags:
+    - microservice
+    - python
+    - fastapi
+    - authentication
+spec:
+  type: service
+  lifecycle: production
+  owner: security-team
+  system: automobile-platform
+  dependsOn:
+    - resource:postgresql-auth
+    - resource:redis
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: users-api
+  description: User management microservice
+  annotations:
+    github.com/project-slug: automobile-company/microservices
+    backstage.io/techdocs-ref: dir:./services/users-api
+  tags:
+    - microservice
+    - python
+    - fastapi
+    - users
+spec:
+  type: service
+  lifecycle: production
+  owner: users-team
+  system: automobile-platform
+  dependsOn:
+    - resource:postgresql-users
+    - resource:redis
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: vehicles-api
+  description: Vehicle data management microservice
+  annotations:
+    github.com/project-slug: automobile-company/microservices
+    backstage.io/techdocs-ref: dir:./services/vehicles-api
+  tags:
+    - microservice
+    - python
+    - fastapi
+    - vehicles
+spec:
+  type: service
+  lifecycle: production
+  owner: vehicles-team
+  system: automobile-platform
+  dependsOn:
+    - resource:postgresql-vehicles
+    - resource:redis
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: telemetry-api
+  description: IoT vehicle telemetry microservice
+  annotations:
+    github.com/project-slug: automobile-company/microservices
+    backstage.io/techdocs-ref: dir:./services/telemetry-api
+  tags:
+    - microservice
+    - python
+    - fastapi
+    - iot
+    - telemetry
+spec:
+  type: service
+  lifecycle: production
+  owner: iot-team
+  system: automobile-platform
+  dependsOn:
+    - resource:postgresql-telemetry
+    - resource:redis
+    - resource:timescaledb
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: geofence-api
+  description: Geofencing and location services microservice
+  annotations:
+    github.com/project-slug: automobile-company/microservices
+    backstage.io/techdocs-ref: dir:./services/geofence-api
+  tags:
+    - microservice
+    - python
+    - fastapi
+    - geofencing
+    - location
+spec:
+  type: service
+  lifecycle: production
+  owner: location-team
+  system: automobile-platform
+  dependsOn:
+    - resource:postgresql-geofence
+    - resource:redis
+    - resource:postgis
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: notifications-api
+  description: Email/SMS/Push notifications microservice
+  annotations:
+    github.com/project-slug: automobile-company/microservices
+    backstage.io/techdocs-ref: dir:./services/notifications-api
+  tags:
+    - microservice
+    - python
+    - fastapi
+    - notifications
+spec:
+  type: service
+  lifecycle: production
+  owner: notifications-team
+  system: automobile-platform
+  dependsOn:
+    - resource:postgresql-notifications
+    - resource:redis
+    - resource:ses
+    - resource:sns
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: billing-api
+  description: Subscription and billing management microservice
+  annotations:
+    github.com/project-slug: automobile-company/microservices
+    backstage.io/techdocs-ref: dir:./services/billing-api
+  tags:
+    - microservice
+    - python
+    - fastapi
+    - billing
+spec:
+  type: service
+  lifecycle: production
+  owner: billing-team
+  system: automobile-platform
+  dependsOn:
+    - resource:postgresql-billing
+    - resource:redis
+    - resource:stripe
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: dealer-portal
+  description: Dealer-facing web frontend
+  annotations:
+    github.com/project-slug: automobile-company/microservices
+    backstage.io/techdocs-ref: dir:./services/dealer-portal
+  tags:
+    - frontend
+    - react
+    - typescript
+    - dealer-portal
+spec:
+  type: website
+  lifecycle: production
+  owner: frontend-team
+  system: automobile-platform
+  dependsOn:
+    - component:orders-api
+    - component:inventory-api
+    - component:users-api
+    - component:vehicles-api
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: reports-api
+  description: Analytics and reporting microservice
+  annotations:
+    github.com/project-slug: automobile-company/microservices
+    backstage.io/techdocs-ref: dir:./services/reports-api
+  tags:
+    - microservice
+    - python
+    - fastapi
+    - analytics
+    - reporting
+spec:
+  type: service
+  lifecycle: production
+  owner: analytics-team
+  system: automobile-platform
+  dependsOn:
+    - resource:postgresql-reports
+    - resource:redis
+    - resource:redshift
