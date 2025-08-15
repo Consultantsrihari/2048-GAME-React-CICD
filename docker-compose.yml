@@ -1,0 +1,177 @@
+version: '3.8'
+
+services:
+  # Authentication Service
+  auth-api:
+    build: ./auth-api
+    ports:
+      - "8000:8000"
+    environment:
+      - JWT_SECRET=dev-secret-key-change-in-production
+      - JWT_ALGORITHM=HS256
+      - JWT_EXPIRATION_HOURS=24
+    networks:
+      - automobile-network
+
+  # Users Service
+  users-api:
+    build: ./users-api
+    ports:
+      - "8001:8001"
+    environment:
+      - AUTH_API_URL=http://auth-api:8000
+    depends_on:
+      - auth-api
+    networks:
+      - automobile-network
+
+  # Vehicles Service
+  vehicles-api:
+    build: ./vehicles-api
+    ports:
+      - "8002:8002"
+    environment:
+      - AUTH_API_URL=http://auth-api:8000
+    depends_on:
+      - auth-api
+    networks:
+      - automobile-network
+
+  # Orders Service
+  orders-api:
+    build: ./orders-api
+    ports:
+      - "8003:8003"
+    environment:
+      - AUTH_API_URL=http://auth-api:8000
+      - VEHICLES_API_URL=http://vehicles-api:8002
+    depends_on:
+      - auth-api
+      - vehicles-api
+    networks:
+      - automobile-network
+
+  # Payments Service
+  payments-api:
+    build: ./payments-api
+    ports:
+      - "8004:8004"
+    environment:
+      - AUTH_API_URL=http://auth-api:8000
+    depends_on:
+      - auth-api
+    networks:
+      - automobile-network
+
+  # Inventory Service
+  inventory-api:
+    build: ./inventory-api
+    ports:
+      - "8005:8005"
+    environment:
+      - AUTH_API_URL=http://auth-api:8000
+    depends_on:
+      - auth-api
+    networks:
+      - automobile-network
+
+  # Telemetry Service
+  telemetry-api:
+    build: ./telemetry-api
+    ports:
+      - "8006:8006"
+    environment:
+      - AUTH_API_URL=http://auth-api:8000
+    depends_on:
+      - auth-api
+    networks:
+      - automobile-network
+
+  # Geofence Service
+  geofence-api:
+    build: ./geofence-api
+    ports:
+      - "8007:8007"
+    environment:
+      - AUTH_API_URL=http://auth-api:8000
+    depends_on:
+      - auth-api
+    networks:
+      - automobile-network
+
+  # Notifications Service
+  notifications-api:
+    build: ./notifications-api
+    ports:
+      - "8008:8008"
+    environment:
+      - AUTH_API_URL=http://auth-api:8000
+    depends_on:
+      - auth-api
+    networks:
+      - automobile-network
+
+  # Billing Service
+  billing-api:
+    build: ./billing-api
+    ports:
+      - "8009:8009"
+    environment:
+      - AUTH_API_URL=http://auth-api:8000
+    depends_on:
+      - auth-api
+    networks:
+      - automobile-network
+
+  # Reports Service
+  reports-api:
+    build: ./reports-api
+    ports:
+      - "8010:8010"
+    environment:
+      - AUTH_API_URL=http://auth-api:8000
+    depends_on:
+      - auth-api
+    networks:
+      - automobile-network
+
+  # Dealer Portal (Frontend)
+  dealer-portal:
+    build: ./dealer-portal
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_AUTH_API_URL=http://localhost:8000
+      - REACT_APP_USERS_API_URL=http://localhost:8001
+      - REACT_APP_VEHICLES_API_URL=http://localhost:8002
+      - REACT_APP_ORDERS_API_URL=http://localhost:8003
+      - REACT_APP_PAYMENTS_API_URL=http://localhost:8004
+    depends_on:
+      - auth-api
+      - users-api
+      - vehicles-api
+      - orders-api
+      - payments-api
+    networks:
+      - automobile-network
+
+  # NGINX Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth-api
+      - users-api
+      - vehicles-api
+      - orders-api
+      - payments-api
+      - dealer-portal
+    networks:
+      - automobile-network
+
+networks:
+  automobile-network:
+    driver: bridge

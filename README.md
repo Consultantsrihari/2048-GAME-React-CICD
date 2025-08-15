@@ -1,25 +1,102 @@
-#### Deploying the 2048 Game on Docker and Kubernetes with Jenkins CI/CD####
+# Automobile Company Microservices Platform
 
+A modern connected-car platform built with 12 independent microservices, designed for scalability, maintainability, and cloud-native deployment.
 
-Step 1 — Launch an Ubuntu(22.04) T2 Large Instance
+## Architecture Overview
 
-Step 2 — Install Jenkins, Docker and Trivy. Create a SonarQube Container using Docker.
+This platform consists of 12 microservices:
 
-Step 3 — Install Plugins like JDK, SonarQube Scanner, Nodejs, and OWASP Dependency Check.
+1. **auth-api** - Authentication & JWT authorization
+2. **users-api** - User profiles management
+3. **vehicles-api** - Vehicle data management
+4. **orders-api** - Car order management
+5. **inventory-api** - Stock and spare parts management
+6. **payments-api** - Transaction processing
+7. **telemetry-api** - IoT vehicle telemetry
+8. **geofence-api** - Geofencing and location services
+9. **notifications-api** - Email/SMS/Push notifications
+10. **billing-api** - Subscription & billing management
+11. **dealer-portal** - Dealer-facing web frontend
+12. **reports-api** - Analytics and reporting
 
-Step 4 — Create a Pipeline Project in Jenkins using a Declarative Pipeline
+## Tech Stack
 
-Step 5 — Install OWASP Dependency Check Plugins
+- **Backend**: Python (FastAPI)
+- **Container**: Docker
+- **Orchestration**: Kubernetes (Helm charts)
+- **CI/CD**: GitHub Actions
+- **Infrastructure**: Terraform
+- **Developer Portal**: Backstage.io
+- **Testing**: pytest
 
-Step 6 — Docker Image Build and Push
+## Quick Start
 
-Step 7 — Deploy the image using Docker
+### Prerequisites
 
-Step 8 — Kubernetes master and slave setup on Ubuntu (20.04)
+- Docker & Docker Compose
+- Kubernetes (kind/minikube for local, EKS for production)
+- Helm 3+
+- Terraform
+- Python 3.11+
 
-Step 9 — Access the Game on Browser.
+### Local Development
 
-Step 10 — Terminate the AWS EC2 Instances.
+```bash
+# Clone the repository
+git clone <repository-url>
+cd automobile-platform
 
-Note: The complete project process will be posted in Medium platform.
-https://medium.com/@sriharimalapati/deploying-the-2048-game-on-docker-and-kubernetes-with-jenkins-ci-cd-50d8755b2c0c
+# Start all services with Docker Compose
+docker-compose up -d
+
+# Or deploy to local Kubernetes
+./scripts/deploy-local.sh
+```
+
+### Production Deployment
+
+```bash
+# Apply Terraform infrastructure
+cd terraform/
+terraform init
+terraform apply
+
+# Deploy services with Helm
+./scripts/deploy-production.sh
+```
+
+## Service Architecture
+
+Each microservice follows the same structure:
+```
+service-name/
+├── src/
+│   ├── main.py
+│   ├── models/
+│   ├── routers/
+│   └── services/
+├── tests/
+├── charts/
+├── Dockerfile
+├── pyproject.toml
+└── README.md
+```
+
+## API Documentation
+
+Each service exposes OpenAPI documentation at `/docs` endpoint.
+
+## Monitoring & Observability
+
+- Health checks at `/healthz`
+- Metrics at `/metrics`
+- Distributed tracing with OpenTelemetry
+- Centralized logging
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
+
+## License
+
+MIT License

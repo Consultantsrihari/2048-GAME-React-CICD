@@ -1,0 +1,18 @@
+apiVersion: v2
+name: auth-api
+description: Authentication and authorization microservice
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+keywords:
+  - automobile
+  - microservices
+  - authentication
+  - jwt
+
+maintainers:
+  - name: Automobile Company
+    email: dev@autocompany.com
+
+dependencies: []
